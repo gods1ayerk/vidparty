@@ -1,5 +1,5 @@
 // Make Connection
-var socket = io.connect("https://cryptic-atoll-44901.herokuapp.com/");
+var socket = io.connect(window.location.href);
 
 // Query DOM
 var player = document.querySelector('.video-player');
