@@ -1,13 +1,8 @@
-body {
-  font-size: 1rem;
+.navbar .navbar-toggler {
+  top: 0.25rem;
+  right: 1rem;
 }
 
-.video-input {
-  display: block;
-  margin: 1rem 0;
-}
-
-.video-player {
-  display: block;
-  max-width: 500px;
+.sidebar-right.bg-dark {
+  color: #fff;
 }

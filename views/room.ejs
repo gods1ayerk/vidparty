@@ -1,0 +1,117 @@
+<div class="row">
+    <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+        <div class="py-2 row">
+            <h1>Room: <%= room %></h1>
+        </div>
+        <div class="row">
+            <div id="message"></div>
+            <div class="custom-file mb-3">
+                <input type="file" class="custom-file-input" id="mediaFile" accept="video/*">
+                <label class="custom-file-label" for="mediaFile">Choose file</label>
+            </div>
+            <video controls id="videoPlayer" class="mb-3" width="100%"></video>
+        </div>
+    </main>
+    <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar-right collapse">
+        <div class="sidebar-sticky pt-3">
+            <h5>Users in Room</h5>
+            <ul class="nav flex-column" id="userList">
+            </ul>
+        </div>
+    </nav>
+</div>
+
+<script>
+    // Make Connection
+    var socket = io.connect(window.location.href);
+    socket.emit('join', {
+        username: <%- JSON.stringify(username) %>,
+        room: <%- JSON.stringify(room) %>
+    });
+
+    // Query DOM
+    var userList = document.getElementById('userList');
+    var mediaFile = document.getElementById('mediaFile');
+    var player = document.getElementById('videoPlayer');
+
+    var socketEvent = false;
+    var displayMessage = function (message, isError) {
+        var element = document.querySelector("#message");
+        element.innerHTML = message;
+        element.className = isError ? "error" : "info";
+      };
+
+    // Handle events
+    mediaFile.addEventListener('change', (event) => {
+        displayMessage("", false); // Reset message
+        var file = event.target.files[0];
+        if(!file) {
+            player.src = '';
+            return;
+        }
+        var type = file.type;
+        var canPlay = player.canPlayType(type);
+        if (canPlay === "") {
+            displayMessage("Cannot play this type of file.", true);
+            player.src = "";
+            return;
+        }
+        mediaFile.labels[0].innerText = file.name;
+        var fileURL = URL.createObjectURL(file);
+        player.src = fileURL;
+    });
+    player.addEventListener('seeked', (event) => {
+        if(socketEvent) {
+            socketEvent = false;
+            return;
+        }
+        if(player.paused) {
+            socket.emit('pause', {currentTime: event.target.currentTime});
+        }
+    });
+    player.addEventListener('play', (event) => {
+        if(socketEvent) {
+            socketEvent = false;
+            return;
+        }
+        socket.emit('play', {currentTime: event.target.currentTime});
+    });
+    player.addEventListener('pause', (event) => {
+        if(event.target.seeking) return;
+        if(socketEvent) {
+            socketEvent = false;
+            return;
+        }
+        socket.emit('pause', {currentTime: event.target.currentTime});
+    });
+    player.addEventListener('error', (event) => {
+        console.log('error', player.error);
+        const currentTime = player.currentTime + 0.1;
+        player.src = player.src;
+        player.currentTime = currentTime;
+    });
+
+    // Socket events
+    socket.on('joined', (data) => {
+        userList.innerHTML = "";
+        for(var user of data.users) {
+            var li = document.createElement('li');
+            li.className = "nav-item py-2";
+            li.innerText = '- ' + user;
+            userList.append(li);
+        }
+    });
+    socket.on('play', (data) => {
+        socketEvent = true;
+        player.currentTime = data.currentTime;
+        socketEvent = true;
+        player.play();
+    });
+    socket.on('pause', (data) => {
+        socketEvent = true;
+        player.pause();
+        socketEvent = true;
+        player.currentTime = data.currentTime;
+    });
+
+</script>
